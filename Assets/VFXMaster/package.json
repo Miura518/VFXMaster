@@ -1,0 +1,19 @@
+{
+  "name": "com.miura.vfx-master",
+  "displayName": "VFX Master",
+  "version": "1.0.0",
+  "unity": "6000.0",
+  "description": "VFX Shaders",
+  "author": {
+    "name": "miura",
+    "url": "https://github.com/Miura518/VFXMaster.git"
+  },
+
+  "keywords": [
+    "shader",
+    "vfx"
+  ],
+
+  "dependencies": {
+  }
+}
