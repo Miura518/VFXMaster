@@ -27,6 +27,16 @@ Shader "Miura/VFXMaster"
         
         [Space]
         
+        [Toggle(USE_NOISE1)] _UseNoise1("Use Noise1", Float) = 0
+        _NoiseTex1("Noise Texture1", 2D) = "white" {}
+        [HDR] _NoiseColor1("Noise Color1", Color) = (1, 1, 1, 1)
+        _NoisePower1("Noise Power1", Float) = 1.0
+        [Toggle(USE_NOISE2)] _UseNoise2("Use Noise2", Float) = 0
+        _NoiseTex2("Noise Texture2", 2D) = "white" {}
+        [HDR] _NoiseColor2("Noise Color2", Color) = (1, 1, 1, 1)
+        
+        [Space]
+        
         _MaskTex("Mask Texture", 2D) = "white"{}
         _MaskThreshold("Mask Threshold", Range(0, 1.5)) = 1.0
         _SmoothRange("Smooth Range", Float) = 0.1
@@ -97,6 +107,8 @@ Shader "Miura/VFXMaster"
             #pragma shader_feature USE_DISTORTION
             #pragma shader_feature USE_EMISSIVE1
             #pragma shader_feature USE_EMISSIVE2
+            #pragma shader_feature USE_NOISE1
+            #pragma shader_feature USE_NOISE2
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
@@ -152,6 +164,12 @@ Shader "Miura/VFXMaster"
 
             TEXTURE2D(_EmissiveTex2);
             SAMPLER(sampler_EmissiveTex2);
+
+            TEXTURE2D(_NoiseTex1);
+            SAMPLER(sampler_NoiseTex1);
+
+            TEXTURE2D(_NoiseTex2);
+            SAMPLER(sampler_NoiseTex2);
             
             float4 _GradiationMap_TexlexSize;
             
@@ -161,6 +179,8 @@ Shader "Miura/VFXMaster"
             half4 _RimColor;
             half4 _EmissiveColor1;
             half4 _EmissiveColor2;
+            half4 _NoiseColor1;
+            half4 _NoiseColor2;
 
             float _MainScrollSpeedX;
             float _MainScrollSpeedY;
@@ -182,6 +202,8 @@ Shader "Miura/VFXMaster"
             float _ToonThreshold;
 
             float _DistortionStrength;
+            
+            float _NoisePower1;
             
             v2f vert (appdata v)
             {
@@ -322,12 +344,24 @@ Shader "Miura/VFXMaster"
                 #endif
 
                 #ifdef USE_EMISSIVE1
-                half3 em1 = SAMPLE_TEXTURE2D(_EmissiveTex1, sampler_EmissiveTex1, i.uv).rgb * _EmissiveColor1;
+                half3 em1 = SAMPLE_TEXTURE2D(_EmissiveTex1, sampler_EmissiveTex1, subUV).rgb * _EmissiveColor1.rgb;
                 col.rgb = saturate(col.rgb + em1);
                 #endif
                 #ifdef USE_EMISSIVE2
-                half3 em2 = SAMPLE_TEXTURE2D(_EmissiveTex2, sampler_EmissiveTex2, i.uv).rgb * _EmissiveColor2;
+                half3 em2 = SAMPLE_TEXTURE2D(_EmissiveTex2, sampler_EmissiveTex2, subUV).rgb * _EmissiveColor2.rgb;
                 col.rgb = saturate(col.rgb + em2);
+                #endif
+
+                #ifdef USE_NOISE1
+                half3 noise1 = SAMPLE_TEXTURE2D(_NoiseTex1, sampler_NoiseTex1, subUV).rgb * _NoiseColor1.rgb;
+                noise1 = pow(noise1, _NoisePower1);
+                col.rgb *= noise1;
+                
+                #endif
+                #ifdef USE_NOISE2
+                half3 noise2 = SAMPLE_TEXTURE2D(_NoiseTex2, sampler_NoiseTex2, subUV).rgb * _NoiseColor2.rgb;
+                col.rgb *= noise2;
+                
                 #endif
                 
                 #ifdef USE_DISTORTION
