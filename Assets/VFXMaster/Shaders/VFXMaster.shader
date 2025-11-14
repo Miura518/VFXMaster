@@ -5,6 +5,7 @@ Shader "Miura/VFXMaster"
         [Enum(Back, 0, Front, 1, Off, 2)] _Culling("Culling Mode", int) = 2
         [Enum(On, 0, Off, 1)] _ZWrite("ZWrite", int) = 1
         [Enum(Less, 0, LEqual, 1, Equal, 2, GEqual, 3, Greater, 4, NotEqual, 5, Always, 6)] _ZTest("ZTest", int) = 0
+        
         _MainTex ("Texture", 2D) = "white" {}
         _MainScrollSpeedX("Main Scroll Speed X", Float) = 0
         _MainScrollSpeedY("Main Scroll Speed Y", Float) = 0
@@ -13,14 +14,30 @@ Shader "Miura/VFXMaster"
         _ScrollMask("Scroll Mask", 2D) = "white" {}
         [Toggle(REVERT_MASK)] _RevertMask("Revert Mask", Float) = 0
         [HDR] _MainColor("Color", Color) = (1, 1, 1, 1)
+        [HDR] _MainAddColor("Add Color", Color) = (0, 0, 0, 1)
+        
         [Space]
+        
+        [Toggle(USE_EMISSIVE1)] _UseEmissive1("Use Emissive1", Float) = 0
+        _EmissiveTex1("Emissive Texture1", 2D) = "white" {}
+        [HDR] _EmissiveColor1("Emissive Color1", Color) = (1, 1, 1, 1)
+        [Toggle(USE_EMISSIVE2)] _UseEmissive2("Use Emissive2", Float) = 0
+        _EmissiveTex2("Emissive Texture2", 2D) = "white" {}
+        [HDR] _EmissiveColor2("Emissive Color2", Color) = (1, 1, 1, 1)
+        
+        [Space]
+        
         _MaskTex("Mask Texture", 2D) = "white"{}
         _MaskThreshold("Mask Threshold", Range(0, 1.5)) = 1.0
         _SmoothRange("Smooth Range", Float) = 0.1
+        
         [Space]
+        
         [HDR] _EdgeGrowColor("Edge Grow Color", Color) = (1, 1, 1, 1)
         _EdgeGrowThreshold("Edge Grow Threshold", Float) = 0.2
+        
         [Space]
+        
         [Toggle(USE_RIM)] _UseRim("Use Rim", Float) = 0
         [HDR] _RimColor("Rim Color", Color) = (1, 1, 1, 1)
         _RimPower("Rim Power", Float) = 1.0
@@ -29,17 +46,25 @@ Shader "Miura/VFXMaster"
         [Toggle(USE_RIMALPHA)] _UseRimAlpha("Use Rim Alpha Clipping", Float) = 0
         _RimScrollX("Rim Mask Scroll Speed X", Float) = 0.0
         _RimScrollY("Rim Mask Scroll Speed Y", Float) = 0.0
+        
         [Space]
+        
         [Toggle(USE_EDGESMOOTH)] _UseEdgeSmooth("Use EdgeSmooth", Float) = 0
         _EdgeSmoothPower("EdgeSmooth Power", Float) = 1.0
         _EdgeSmoothThreshold("EdgeSmooth Threshold", Float) = 1.0
+        
         [Space]
+        
         [Toggle(USE_POLARCOORDINATE)] _UsePolarCoordinate("Use PolarCoordinate", Float) = 0
+        
         [Space]
+        
         [Toggle(TOON)] _Toon("Toon", Float) = 0
         _ToonPower("Toon Power", Float) = 0.0
         _ToonThreshold("Toon Threshold", Float) = 0.0
+        
         [Space]
+        
         [Toggle(USE_DISTORTION)] _UseDistortion("Use Distortion", Float) = 0
         [Normal] _DistortionMap("Distortion Normal Map", 2D) = "bamp" {}
         _DistortionStrength("Distortion Strength", Range(-1, 1)) = 1.0
@@ -70,6 +95,8 @@ Shader "Miura/VFXMaster"
             #pragma shader_feature REVERT_MASK
             #pragma shader_feature TOON
             #pragma shader_feature USE_DISTORTION
+            #pragma shader_feature USE_EMISSIVE1
+            #pragma shader_feature USE_EMISSIVE2
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
@@ -119,11 +146,21 @@ Shader "Miura/VFXMaster"
 
             TEXTURE2D(_GradationMap);
             SAMPLER(sampler_GradationMap);
+
+            TEXTURE2D(_EmissiveTex1);
+            SAMPLER(sampler_EmissiveTex1);
+
+            TEXTURE2D(_EmissiveTex2);
+            SAMPLER(sampler_EmissiveTex2);
+            
             float4 _GradiationMap_TexlexSize;
             
             half4 _MainColor;
+            half4 _MainAddColor;
             half4 _EdgeGrowColor;
             half4 _RimColor;
+            half4 _EmissiveColor1;
+            half4 _EmissiveColor2;
 
             float _MainScrollSpeedX;
             float _MainScrollSpeedY;
@@ -145,7 +182,7 @@ Shader "Miura/VFXMaster"
             float _ToonThreshold;
 
             float _DistortionStrength;
-
+            
             v2f vert (appdata v)
             {
                  v2f o;
@@ -259,6 +296,8 @@ Shader "Miura/VFXMaster"
                 
                 half4 col = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, subUV) * _MainColor;
 
+                col.rgb = saturate(col.rgb + _MainAddColor.rgb);
+                
                 col.a = Mask(subUV);
                 col.a *= i.color.a;
 
@@ -280,6 +319,15 @@ Shader "Miura/VFXMaster"
                 col.a *= 1 - scrollA;
                 #else
                 col.a *= scrollA;
+                #endif
+
+                #ifdef USE_EMISSIVE1
+                half3 em1 = SAMPLE_TEXTURE2D(_EmissiveTex1, sampler_EmissiveTex1, i.uv).rgb * _EmissiveColor1;
+                col.rgb = saturate(col.rgb + em1);
+                #endif
+                #ifdef USE_EMISSIVE2
+                half3 em2 = SAMPLE_TEXTURE2D(_EmissiveTex2, sampler_EmissiveTex2, i.uv).rgb * _EmissiveColor2;
+                col.rgb = saturate(col.rgb + em2);
                 #endif
                 
                 #ifdef USE_DISTORTION
