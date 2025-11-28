@@ -31,9 +31,12 @@ Shader "Miura/VFXMaster"
         _NoiseTex1("Noise Texture1", 2D) = "white" {}
         [HDR] _NoiseColor1("Noise Color1", Color) = (1, 1, 1, 1)
         _NoisePower1("Noise Power1", Float) = 1.0
+        [KeywordEnum(Multiply, Add)] _Noise1MixType("Noise1 Mix Type", int) = 0
         [Toggle(USE_NOISE2)] _UseNoise2("Use Noise2", Float) = 0
         _NoiseTex2("Noise Texture2", 2D) = "white" {}
         [HDR] _NoiseColor2("Noise Color2", Color) = (1, 1, 1, 1)
+        _NoisePower2("Noise Power2", Float) = 1.0
+        [KeywordEnum(Multiply, Add)] _Noise2MixType("Noise2 Mix Type", int) = 0
         
         [Space]
         
@@ -109,6 +112,8 @@ Shader "Miura/VFXMaster"
             #pragma shader_feature USE_EMISSIVE2
             #pragma shader_feature USE_NOISE1
             #pragma shader_feature USE_NOISE2
+            #pragma shader_feature _NOISE1MIXTYPE_MULTIPLY _NOISE1MIXTYPE_ADD
+            #pragma shader_feature _NOISE2MIXTYPE_MULTIPLY _NOISE2MIXTYPE_ADD
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
@@ -128,14 +133,6 @@ Shader "Miura/VFXMaster"
                 float3 normal : TEXCOORD2;
                 float4 screenPos : TEXCOORD3;
                 float4 color : TEXCOORD4;
-            };
-
-            static const int PATTERN[16] =
-            {
-                0 , 8 , 2 , 10,
-                12, 4 , 14, 6 ,
-                3 , 11, 1 , 9 ,
-                15, 7 , 13, 5
             };
             
             TEXTURE2D(_MainTex);
@@ -204,6 +201,10 @@ Shader "Miura/VFXMaster"
             float _DistortionStrength;
             
             float _NoisePower1;
+            float _NoisePower2;
+
+            float _Noise1MixType;
+            float _Noise2MixType;
             
             v2f vert (appdata v)
             {
@@ -304,6 +305,22 @@ Shader "Miura/VFXMaster"
 
                 return col;
             }
+            half3 Noise1(float2 uv)
+            {
+                float noise = SAMPLE_TEXTURE2D(_NoiseTex1, sampler_NoiseTex1, uv).r;
+                noise = pow(noise, _NoisePower1);
+                half3 noiseCol = _NoiseColor1.rgb * noise;
+
+                return noiseCol;
+            }
+            half3 Noise2(float2 uv)
+            {
+                float noise = SAMPLE_TEXTURE2D(_NoiseTex2, sampler_NoiseTex2, uv).r;
+                noise = pow(noise, _NoisePower2);
+                half3 noiseCol = _NoiseColor2.rgb * noise;
+
+                return noiseCol;
+            }
             half4 frag (v2f i) : SV_Target
             {
                 float2 subUV = i.uv;
@@ -353,19 +370,22 @@ Shader "Miura/VFXMaster"
                 #endif
 
                 #ifdef USE_NOISE1
-                half3 noise1 = SAMPLE_TEXTURE2D(_NoiseTex1, sampler_NoiseTex1, subUV).rgb * _NoiseColor1.rgb;
-                noise1 = pow(noise1, _NoisePower1);
-                col.rgb *= noise1;
-                
+                    #ifdef _NOISE1MIXTYPE_ADD
+                    col.rgb += Noise1(subUV);
+                    #else
+                    col.rgb *= Noise1(subUV);
+                    #endif
                 #endif
                 #ifdef USE_NOISE2
-                half3 noise2 = SAMPLE_TEXTURE2D(_NoiseTex2, sampler_NoiseTex2, subUV).rgb * _NoiseColor2.rgb;
-                col.rgb *= noise2;
-                
+                    #ifdef _NOISE2MIXTYPE_ADD
+                    col.rgb += Noise2(subUV);
+                    #else
+                    col.rgb *= Noise2(subUV);
+                    #endif
                 #endif
                 
                 #ifdef USE_DISTORTION
-                col *= Distortion(subUV, i.screenPos);
+                col = Distortion(subUV, i.screenPos);
                 #endif
 
                 #ifdef TOON
@@ -389,4 +409,5 @@ Shader "Miura/VFXMaster"
             ENDHLSL
         }
     }
+    CustomEditor "VFXMasterCustomShaderGUI"
 }
