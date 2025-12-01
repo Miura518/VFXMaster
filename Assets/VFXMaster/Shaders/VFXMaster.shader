@@ -76,7 +76,7 @@ Shader "Miura/VFXMaster"
         
         [Toggle(TOON)] _Toon("Toon", Float) = 0
         _ToonPower("Toon Power", Float) = 0.0
-        _ToonThreshold("Toon Threshold", Float) = 0.0
+        _ToonThreshold("Toon Threshold", Range(0, 1)) = 0.25
         
         [Space]
         
@@ -106,7 +106,7 @@ Shader "Miura/VFXMaster"
 
             #define PI = 3.1415926535
             
-            // 機能切り替え用のマクロ定義
+            // 機能切り替え用のシェーダー変数定義
             #pragma shader_feature USE_RIM
             #pragma shader_feature USE_RIMALPHA
             #pragma shader_feature USE_EDGESMOOTH
@@ -285,17 +285,10 @@ Shader "Miura/VFXMaster"
                 
                 return res;
             }
-            // TODO:試行錯誤必須
             half3 Toon(half3 diffuse)
             {
                 half3 col = diffuse;
-                half luminance = dot(col, half3(0.299, 0.587, 0.114));
-
-                half steps = 3.0;
-
-                luminance = floor(luminance * steps) / (steps - 1.0);
-
-                col = normalize(col) * luminance;
+                col = step(_ToonThreshold, col);
 
                 return col;
             }

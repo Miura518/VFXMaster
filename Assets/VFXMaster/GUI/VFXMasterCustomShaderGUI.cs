@@ -9,6 +9,7 @@ public class VFXMasterCustomShaderGUI : ShaderGUI
     bool _showMask = false;
     bool _showRim = false;
     bool _showDistortion = false;
+    bool _showToon = false;
     
     public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
     {
@@ -65,6 +66,10 @@ public class VFXMasterCustomShaderGUI : ShaderGUI
         MaterialProperty _UseDistortion = FindProperty("_UseDistortion", props);
         MaterialProperty _DistortionMap = FindProperty("_DistortionMap", props);
         MaterialProperty _DistortionStrength = FindProperty("_DistortionStrength", props);
+        
+        MaterialProperty _Toon = FindProperty("_Toon", props);
+        MaterialProperty _ToonPower = FindProperty("_ToonPower", props);
+        MaterialProperty _ToonThreshold = FindProperty("_ToonThreshold", props);
         
         GUIStyle boxStyle = new GUIStyle(EditorStyles.helpBox)
         {
@@ -225,6 +230,25 @@ public class VFXMasterCustomShaderGUI : ShaderGUI
                 EditorGUILayout.Space();
                 materialEditor.ShaderProperty( _RimScrollX, new GUIContent("Scroll X Speed" ) );
                 materialEditor.ShaderProperty( _RimScrollY, new GUIContent("Scroll Y Speed" ) );
+            }
+            EditorGUI.indentLevel--;
+            EditorGUILayout.EndVertical();
+        }
+        EditorGUILayout.Space();
+        #endregion
+        
+        #region Toon
+        // Toon Settings
+        _showToon = EditorGUILayout.Foldout(_showToon, "Toon", true, foldoutStyle);
+        if (_showToon)
+        {
+            EditorGUILayout.BeginVertical(boxStyle);
+            EditorGUILayout.Space();
+            EditorGUI.indentLevel++;
+            materialEditor.ShaderProperty( _Toon, new GUIContent("Use Toon" ) );
+            if (_Toon.floatValue != 0.0f)
+            {
+                materialEditor.ShaderProperty( _ToonThreshold, new GUIContent("Threshold" ) );
             }
             EditorGUI.indentLevel--;
             EditorGUILayout.EndVertical();
