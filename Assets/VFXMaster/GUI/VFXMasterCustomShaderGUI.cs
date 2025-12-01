@@ -18,6 +18,8 @@ public class VFXMasterCustomShaderGUI : ShaderGUI
         MaterialProperty _Culling = FindProperty("_Culling", props);
         MaterialProperty _ZWrite = FindProperty("_ZWrite", props);
         MaterialProperty _ZTest = FindProperty("_ZTest", props);
+        MaterialProperty _SrcBlend = FindProperty("_SrcBlend", props);
+        MaterialProperty _DstBlend = FindProperty("_DstBlend", props);
         MaterialProperty _UsePolarCoordinate = FindProperty("_UsePolarCoordinate", props);
         
         MaterialProperty _MainScrollSpeedX = FindProperty("_MainScrollSpeedX", props);
@@ -91,15 +93,33 @@ public class VFXMasterCustomShaderGUI : ShaderGUI
             materialEditor.ShaderProperty( _Culling, new GUIContent("Culling Mode" ) );
             materialEditor.ShaderProperty( _ZWrite, new GUIContent("ZWrite Mode" ) );
             materialEditor.ShaderProperty( _ZTest, new GUIContent("ZTest Mode" ) );
+            materialEditor.ShaderProperty( _SrcBlend, new GUIContent("SrcBlend" ) );
+            materialEditor.ShaderProperty( _DstBlend, new GUIContent("DstBlend" ) );
             EditorGUILayout.Space();
             materialEditor.ShaderProperty( _MainScrollSpeedX, new GUIContent("Scroll X Speed" ) );
             materialEditor.ShaderProperty( _MainScrollSpeedY, new GUIContent("Scroll Y Speed" ) );
             EditorGUILayout.Space();
             materialEditor.ShaderProperty( _UsePolarCoordinate, new GUIContent("Polar Coordinate" ) );
             
+            EditorGUILayout.Space();
+            Material mat = materialEditor.target as Material;
+            if (!mat) { return; }
+
+            int queue = mat.renderQueue;
+            int newQueue = EditorGUILayout.IntField( "Render Queue", queue );
+
+            if (newQueue != queue)
+            {
+                mat.renderQueue = newQueue;
+                EditorUtility.SetDirty( mat );
+            }
+            
+            
             EditorGUI.indentLevel--;
             EditorGUILayout.EndVertical();
         }
+        
+        
         EditorGUILayout.Space();
         #endregion
         

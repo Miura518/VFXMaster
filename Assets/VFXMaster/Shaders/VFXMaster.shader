@@ -2,9 +2,11 @@ Shader "Miura/VFXMaster"
 {
     Properties
     {
-        [Enum(Back, 0, Front, 1, Off, 2)] _Culling("Culling Mode", int) = 2
-        [Enum(On, 0, Off, 1)] _ZWrite("ZWrite", int) = 1
-        [Enum(Less, 0, LEqual, 1, Equal, 2, GEqual, 3, Greater, 4, NotEqual, 5, Always, 6)] _ZTest("ZTest", int) = 0
+        [Enum(UnityEngine.Rendering.CullMode)] _Culling("Culling Mode", int) = 0
+        [KeywordEnum(Off, On)] _ZWrite("ZWrite", int) = 0
+        [Enum(UnityEngine.Rendering.CompareFunction)] _ZTest("ZTest", int) = 4
+        [Enum(UnityEngine.Rendering.BlendMode)] _SrcBlend("Src Blend", int) = 5
+        [Enum(UnityEngine.Rendering.BlendMode)] _DstBlend("Dst Blend", int) = 10
         
         _MainTex ("Texture", 2D) = "white" {}
         _MainScrollSpeedX("Main Scroll Speed X", Float) = 0
@@ -84,17 +86,21 @@ Shader "Miura/VFXMaster"
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" "Queue"="Transparent"}
+        Tags { "RenderType"="Opaque" "Queue"="Geometry" }
         
         ZWrite [_ZWrite]
         Cull [_Culling]
         ZTest [_ZTest]
-        
-        Blend SrcAlpha OneMinusSrcAlpha
+        Blend [_SrcBlend] [_DstBlend]
 
         Pass
         {
+            Name "Forward"
+            
+            Tags { "LightMode"="UniversalForward" }
+            
             HLSLPROGRAM
+            #pragma target 2.0
             #pragma vertex vert
             #pragma fragment frag
 
@@ -116,7 +122,7 @@ Shader "Miura/VFXMaster"
             #pragma shader_feature _NOISE2MIXTYPE_MULTIPLY _NOISE2MIXTYPE_ADD
             
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
-
+        
             struct appdata
             {
                 float4 vertex : POSITION;
@@ -144,9 +150,6 @@ Shader "Miura/VFXMaster"
             TEXTURE2D(_ScrollMask);
             SAMPLER(sampler_ScrollMask);
 
-            TEXTURE2D(_CameraOpaqueTexture);
-            SAMPLER(sampler_CameraOpaqueTexture);
-
             TEXTURE2D(_RimMask);
             SAMPLER(sampler_RimMask);
 
@@ -167,6 +170,9 @@ Shader "Miura/VFXMaster"
 
             TEXTURE2D(_NoiseTex2);
             SAMPLER(sampler_NoiseTex2);
+
+            TEXTURE2D(_CameraOpaqueTexture);
+            SAMPLER(sampler_CameraOpaqueTexture);
             
             float4 _GradiationMap_TexlexSize;
             
@@ -262,19 +268,7 @@ Shader "Miura/VFXMaster"
 
                 return half4(color, a);
             }
-            half4 Distortion(float2 uv, float4 screen)
-            {
-                float2 screenPos = screen.xy / screen.w;
-                half4 tex = SAMPLE_TEXTURE2D(_DistortionMap, sampler_DistortionMap, uv);
-                half3 normal = UnpackNormal(tex);
-                
-                float2 distortion = normal.xy * (_DistortionStrength * 0.1);
-                float2 screenUV = screenPos + distortion;
-                
-                half4 screenColor = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, screenUV);
-                
-                return screenColor;
-            }
+            
             float2 PolarCoordinate(float2 uv)
             {
                 const float p2 = 1 / (PI * 2);
@@ -320,6 +314,19 @@ Shader "Miura/VFXMaster"
                 half3 noiseCol = _NoiseColor2.rgb * noise;
 
                 return noiseCol;
+            }
+            half4 Distortion(float2 uv, float4 screen)
+            {
+                float2 screenPos = screen.xy / screen.w;
+                half4 tex = SAMPLE_TEXTURE2D(_DistortionMap, sampler_DistortionMap, uv);
+                half3 normal = UnpackNormal(tex);
+                
+                float2 distortion = normal.xy * (_DistortionStrength * 0.1);
+                float2 screenUV = screenPos + distortion;
+                
+                half4 screenColor = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, screenUV);
+                
+                return screenColor;
             }
             half4 frag (v2f i) : SV_Target
             {
@@ -385,7 +392,7 @@ Shader "Miura/VFXMaster"
                 #endif
                 
                 #ifdef USE_DISTORTION
-                col = Distortion(subUV, i.screenPos);
+                col.rgb = Distortion(subUV, i.screenPos).rgb;
                 #endif
 
                 #ifdef TOON
@@ -401,9 +408,8 @@ Shader "Miura/VFXMaster"
                 int uvY = (int)fmod(screenPix.y, 4.0f);
                 float dither = PATTERN[uvX + uvY * 4];
                 
-                clip(dither - (1 - col.a));*/
                 // ---------------------------------------
-                
+                */
                 return col;
             }
             ENDHLSL
